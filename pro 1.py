@@ -40,8 +40,7 @@ if run_btn:
 
 if reset_btn:
     st.session_state.run_analysis = False
-    st.experimental_rerun()
-
+    st.rerun()
 # ---------- RUN ANALYSIS ----------
 if st.session_state.run_analysis:
     
