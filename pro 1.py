@@ -1,160 +1,134 @@
 import streamlit as st
 import networkx as nx
 import matplotlib.pyplot as plt
-import random
 import pandas as pd
+import random
 
 st.set_page_config(page_title="Entertainment Fan Network Analysis", layout="wide")
 
-# ---------- HEADER ----------
-# Project Description
+# ---------- SESSION STATE ----------
+if "run_analysis" not in st.session_state:
+    st.session_state.run_analysis = False
+
+# ---------- TITLE & DESCRIPTION ----------
+st.title("🎬 Entertainment Fan Network Analysis")
+
 st.markdown("""
-### 📌 Project Scope
-- Study fan communities online
-- Combine: Graph + Community Detection
-- Components: Fans (nodes), Connections (edges)
-- Include: Influencer ranking, viral spread, clustering insights
+### 📌 About This Model
+This model is used to analyze online entertainment fan communities.
+
+**Key Features:**
+- Study fan communities online  
+- Combine: Graph + Community Detection  
+- Components: Fans (nodes), Connections (edges)  
+- Includes: Influencer ranking, viral spread, clustering insights  
+
+👉 Enter input from sidebar and click **Run Analysis** to generate results.
 """)
 
-# ---------- HEADER ----------
-st.markdown("""
-# 🎬 Entertainment Fan Network Analysis Dashboard
-### Professional Level Academic Project
-""")
+# ---------- SIDEBAR INPUT ----------
+st.sidebar.header("📥 Input Parameters")
+num_users = st.sidebar.slider("Number of Fans", 10, 100, 30)
+connection_prob = st.sidebar.slider("Connection Probability", 0.01, 0.5, 0.1)
 
-# ---------- INTRO ----------
-st.markdown("""
-This project analyzes **online fan communities** using **graph theory and network analysis**.
+run_btn = st.sidebar.button("▶ Run Analysis")
+reset_btn = st.sidebar.button("🔄 Reset")
 
-- **Nodes (Fans):** Represent individual users
-- **Edges (Connections):** Represent interactions between fans
-- **Goal:** Identify influencers, detect communities, and analyze content spread
-""")
+# ---------- BUTTON LOGIC ----------
+if run_btn:
+    st.session_state.run_analysis = True
 
-# ---------- SIDEBAR ----------
-st.sidebar.header("⚙️ Configuration")
-num_users = st.sidebar.slider("Number of Fans", 10, 150, 40)
-connection_prob = st.sidebar.slider("Connection Density", 0.01, 0.3, 0.07)
+if reset_btn:
+    st.session_state.run_analysis = False
+    st.experimental_rerun()
 
-network_type = st.sidebar.selectbox("Network Model", ["Random Network", "Scale-Free Network (Influencer Driven)"])
-
-# ---------- NETWORK CREATION ----------
-if network_type == "Random Network":
+# ---------- RUN ANALYSIS ----------
+if st.session_state.run_analysis:
+    
+    # Create graph
     G = nx.erdos_renyi_graph(num_users, connection_prob)
-else:
-    G = nx.barabasi_albert_graph(num_users, max(1, int(num_users * connection_prob)))
 
-# ---------- METRICS ----------
-degree_centrality = nx.degree_centrality(G)
-betweenness = nx.betweenness_centrality(G)
-clustering = nx.clustering(G)
+    # Metrics
+    centrality = nx.degree_centrality(G)
+    betweenness = nx.betweenness_centrality(G)
 
-# ---------- COMMUNITY DETECTION ----------
-from networkx.algorithms import community
-communities = list(community.greedy_modularity_communities(G))
+    # Top influencers
+    top_influencers = sorted(centrality.items(), key=lambda x: x[1], reverse=True)[:5]
 
-# ---------- LAYOUT ----------
-pos = nx.spring_layout(G, seed=42)
+    # Communities
+    from networkx.algorithms import community
+    communities = list(community.greedy_modularity_communities(G))
 
-# ---------- DASHBOARD METRICS ----------
-st.subheader("📊 Network Overview")
-col1, col2, col3 = st.columns(3)
+    # Layout
+    pos = nx.spring_layout(G, seed=42)
 
-col1.metric("Total Fans", G.number_of_nodes())
-col2.metric("Total Connections", G.number_of_edges())
-col3.metric("Detected Communities", len(communities))
+    # ---------- GRAPH ----------
+    st.subheader("🌐 Fan Network Graph")
 
-# ---------- VISUALIZATION ----------
-st.subheader("🌐 Network Visualization")
+    fig, ax = plt.subplots(figsize=(10, 7))
+    node_sizes = [v * 3000 for v in centrality.values()]
 
-fig, ax = plt.subplots(figsize=(12, 8))
+    nx.draw(
+        G,
+        pos,
+        ax=ax,
+        with_labels=False,
+        node_size=node_sizes,
+        node_color=list(centrality.values()),
+        cmap=plt.cm.plasma,
+        edge_color="gray"
+    )
 
-node_sizes = [v * 4000 for v in degree_centrality.values()]
-node_colors = list(clustering.values())
+    st.pyplot(fig)
 
-nx.draw(
-    G,
-    pos,
-    ax=ax,
-    with_labels=False,
-    node_size=node_sizes,
-    node_color=node_colors,
-    cmap=plt.cm.viridis,
-    edge_color="gray"
-)
+    # ---------- METRICS ----------
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Fans", num_users)
+    col2.metric("Connections", G.number_of_edges())
+    col3.metric("Communities", len(communities))
 
-st.pyplot(fig)
+    # ---------- INFLUENCERS ----------
+    st.subheader("🔥 Influencer Ranking")
 
-st.markdown("""
-**Interpretation:**
-- Larger nodes = Higher influence (degree centrality)
-- Color intensity = Clustering coefficient (community strength)
-- Dense clusters = Fan communities
+    df = pd.DataFrame([
+        {"Fan": f"Fan {node}", "Influence Score": round(score, 3), "Betweenness": round(betweenness[node], 3)}
+        for node, score in top_influencers
+    ])
+
+    st.dataframe(df, use_container_width=True)
+
+    # ---------- COMMUNITIES ----------
+    st.subheader("👥 Community Detection")
+
+    comm_data = []
+    for i, comm in enumerate(communities):
+        comm_data.append({"Community": i+1, "Size": len(comm)})
+
+    st.dataframe(pd.DataFrame(comm_data), use_container_width=True)
+
+    # ---------- VIRAL SIMULATION ----------
+    st.subheader("🚀 Viral Spread Simulation")
+
+    start = random.choice(list(G.nodes()))
+    visited = set([start])
+    queue = [start]
+
+    for _ in range(5):
+        if not queue:
+            break
+        node = queue.pop(0)
+        for neighbor in G.neighbors(node):
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+
+    st.write(f"Started from Fan {start}")
+    st.write(f"Reached {len(visited)} fans in 5 steps")
+
+    # ---------- INSIGHTS ----------
+    st.subheader("📊 Insights")
+    st.markdown("""
+- Larger nodes = more influential fans  
+- Communities show clustered fan groups  
+- Influencers drive viral spread  
 """)
-
-# ---------- INFLUENCER ANALYSIS ----------
-st.subheader("🔥 Influencer Analysis")
-
-top_influencers = sorted(degree_centrality.items(), key=lambda x: x[1], reverse=True)[:7]
-
-influencer_df = pd.DataFrame([
-    {
-        "Fan": f"Fan {node}",
-        "Influence Score": round(score, 3),
-        "Betweenness": round(betweenness[node], 3),
-        "Clustering": round(clustering[node], 3)
-    }
-    for node, score in top_influencers
-])
-
-st.dataframe(influencer_df, use_container_width=True)
-
-# ---------- COMMUNITY ANALYSIS ----------
-st.subheader("👥 Community Detection")
-
-community_data = []
-for i, comm in enumerate(communities):
-    community_data.append({
-        "Community ID": i + 1,
-        "Number of Fans": len(comm)
-    })
-
-st.dataframe(pd.DataFrame(community_data), use_container_width=True)
-
-# ---------- CONTENT SPREAD SIMULATION ----------
-st.subheader("🚀 Information Spread Simulation")
-
-start_node = random.choice(list(G.nodes()))
-visited = set([start_node])
-queue = [start_node]
-steps = 0
-
-while queue and steps < 4:
-    current = queue.pop(0)
-    for neighbor in G.neighbors(current):
-        if neighbor not in visited:
-            visited.add(neighbor)
-            queue.append(neighbor)
-    steps += 1
-
-st.write(f"Content originated from **Fan {start_node}**")
-st.write(f"Total fans reached: **{len(visited)}** within {steps} steps")
-
-# ---------- KEY INSIGHTS ----------
-st.subheader("📌 Key Insights")
-st.markdown("""
-- Influencers (high centrality) accelerate content spread
-- Communities represent clustered fan interests
-- Scale-free networks better simulate real-world social media
-- Network structure directly impacts virality
-""")
-
-# ---------- CONCLUSION ----------
-st.subheader("📊 Conclusion")
-st.markdown("""
-This project demonstrates how **graph theory** can be applied to analyze entertainment fan networks. 
-By identifying influencers and communities, we gain insights into audience behavior and content dissemination patterns.
-""")
-
-st.markdown("---")
-st.caption("Professional Academic Project | Entertainment Fan Network Analysis")
