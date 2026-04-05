@@ -40,7 +40,8 @@ if run_btn:
 
 if reset_btn:
     st.session_state.run_analysis = False
-    st.rerun()
+    st.experimental_rerun()
+
 # ---------- RUN ANALYSIS ----------
 if st.session_state.run_analysis:
     
@@ -78,7 +79,18 @@ if st.session_state.run_analysis:
         edge_color="gray"
     )
 
-    st.pyplot(fig)
+    # Add legend
+import matplotlib.patches as mpatches
+
+legend_elements = [
+    mpatches.Patch(color=plt.cm.plasma(0.9), label='High Influence'),
+    mpatches.Patch(color=plt.cm.plasma(0.5), label='Medium Influence'),
+    mpatches.Patch(color=plt.cm.plasma(0.1), label='Low Influence')
+]
+
+ax.legend(handles=legend_elements, loc='upper right')
+
+st.pyplot(fig)
 
     # ---------- METRICS ----------
     col1, col2, col3 = st.columns(3)
@@ -131,3 +143,4 @@ if st.session_state.run_analysis:
 - Communities show clustered fan groups  
 - Influencers drive viral spread  
 """)
+
