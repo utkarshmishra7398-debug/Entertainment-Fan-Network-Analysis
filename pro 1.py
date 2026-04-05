@@ -89,14 +89,17 @@ legend_elements = [
 ]
 
 ax.legend(handles=legend_elements, loc='upper right')
+if st.session_state.run_analysis:
+    st.pyplot(fig)
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Fans", num_users)
+    col2.metric("Connections", G.number_of_edges())
+    col3.metric("Communities", len(communities))
+    
 
-st.pyplot(fig)
 
     # ---------- METRICS ----------
-col1, col2, col3 = st.columns(3)
-col1.metric("Total Fans", num_users)
-col2.metric("Connections", G.number_of_edges())
-col3.metric("Communities", len(communities))
+
 
     # ---------- INFLUENCERS ----------
     st.subheader("🔥 Influencer Ranking")
