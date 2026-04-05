@@ -10,7 +10,7 @@ st.set_page_config(page_title="Entertainment Fan Network Analysis", layout="wide
 if "run_analysis" not in st.session_state:
     st.session_state.run_analysis = False
 
-# ---------- TITLE & DESCRIPTION ----------
+# ---------- TITLE ----------
 st.title("🎬 Entertainment Fan Network Analysis")
 
 st.markdown("""
@@ -26,7 +26,7 @@ This model is used to analyze online entertainment fan communities.
 👉 Enter input from sidebar and click **Run Analysis** to generate results.
 """)
 
-# ---------- SIDEBAR INPUT ----------
+# ---------- SIDEBAR ----------
 st.sidebar.header("📥 Input Parameters")
 num_users = st.sidebar.slider("Number of Fans", 10, 100, 30)
 connection_prob = st.sidebar.slider("Connection Probability", 0.01, 0.5, 0.1)
@@ -40,11 +40,11 @@ if run_btn:
 
 if reset_btn:
     st.session_state.run_analysis = False
-    st.experimental_rerun()
+    st.rerun()   # ✅ FIXED
 
 # ---------- RUN ANALYSIS ----------
 if st.session_state.run_analysis:
-    
+
     # Create graph
     G = nx.erdos_renyi_graph(num_users, connection_prob)
 
@@ -79,27 +79,23 @@ if st.session_state.run_analysis:
         edge_color="gray"
     )
 
-    # Add legend
-import matplotlib.patches as mpatches
+    # ✅ LEGEND FIX (inside block)
+    import matplotlib.patches as mpatches
+    legend_elements = [
+        mpatches.Patch(color=plt.cm.plasma(0.9), label='High Influence'),
+        mpatches.Patch(color=plt.cm.plasma(0.5), label='Medium Influence'),
+        mpatches.Patch(color=plt.cm.plasma(0.1), label='Low Influence')
+    ]
 
-legend_elements = [
-    mpatches.Patch(color=plt.cm.plasma(0.9), label='High Influence'),
-    mpatches.Patch(color=plt.cm.plasma(0.5), label='Medium Influence'),
-    mpatches.Patch(color=plt.cm.plasma(0.1), label='Low Influence')
-]
+    ax.legend(handles=legend_elements, loc='upper right')
 
-ax.legend(handles=legend_elements, loc='upper right')
-if st.session_state.run_analysis:
     st.pyplot(fig)
+
+    # ---------- METRICS ----------
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Fans", num_users)
     col2.metric("Connections", G.number_of_edges())
     col3.metric("Communities", len(communities))
-    
-
-
-    # ---------- METRICS ----------
-
 
     # ---------- INFLUENCERS ----------
     st.subheader("🔥 Influencer Ranking")
@@ -143,7 +139,7 @@ if st.session_state.run_analysis:
     st.subheader("📊 Insights")
     st.markdown("""
 - Larger nodes = more influential fans  
+- Colors represent influence levels  
 - Communities show clustered fan groups  
 - Influencers drive viral spread  
 """)
-
